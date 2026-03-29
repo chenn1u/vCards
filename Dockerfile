@@ -7,10 +7,18 @@ RUN npm install && npm run radicale
 
 FROM alpine:edge
 
-RUN apk add --no-cache \
-    radicale py3-six\
+# 国内环境换源（如不需要可删除）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+RUN apk update \
+  && apk add --no-cache python3 py3-pip \
+  && pip3 install --no-cache-dir radicale --break-system-packages \
   && rm -rf /var/cache/apk/* \
   \
+  # 创建必要目录
+  && mkdir -p /etc/radicale /app/vcards/collection-root/cn /app/vcards/collection-root/cnmacos \
+  \
+  # 写 rights 文件
   && { \
     echo '[root]'; \
     echo 'user: .+'; \
@@ -28,6 +36,7 @@ RUN apk add --no-cache \
     echo 'permissions: rR'; \
   } > /etc/radicale/rights \
   \
+  # 写 config 文件
   && { \
     echo '[server]'; \
     echo 'hosts = 0.0.0.0:5232, [::]:5232'; \
@@ -47,9 +56,9 @@ RUN apk add --no-cache \
     echo 'file = /etc/radicale/rights'; \
   } > /etc/radicale/config
 
-COPY --from=builder /app/radicale/ios/ /app/vcards/collection-root/cn/
+COPY --from=builder /app/radicale/ios/   /app/vcards/collection-root/cn/
 COPY --from=builder /app/radicale/macos/ /app/vcards/collection-root/cnmacos/
 
 EXPOSE 5232
 
-CMD ["radicale"]
+CMD ["python3", "-m", "radicale"]
